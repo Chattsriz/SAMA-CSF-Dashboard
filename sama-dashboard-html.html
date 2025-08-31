@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAMA CSF 250 Controls Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .status-pending { color: #6B7280; }
+        .status-submitted { color: #10B981; }
+        .status-resubmit { color: #F59E0B; }
+        .status-monitoring { color: #3B82F6; }
+        .status-closed { color: #065F46; }
+        
+        .bg-status-pending { background-color: #6B7280; }
+        .bg-status-submitted { background-color: #10B981; }
+        .bg-status-resubmit { background-color: #F59E0B; }
+        .bg-status-monitoring { background-color: #3B82F6; }
+        .bg-status-closed { background-color: #065F46; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-900">
+    <!-- Header -->
+    <div class="bg-gray-800 shadow-lg border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 space-y-4 sm:space-y-0">
+                <h1 class="text-xl sm:text-2xl font-bold text-white">SAMA CSF 250 Controls Dashboard</h1>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <button onclick="showView('overview')" id="btn-overview" class="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white">
+                            Overview
+                        </button>
+                        <button onclick="showView('detailed')" id="btn-detailed" class="px-3 py-2 text-sm rounded-lg bg-gray-700 text-gray-300">
+                            Detailed Analytics
+                        </button>
+                        <button onclick="showView('mappings')" id="btn-mappings" class="px-3 py-2 text-sm rounded-lg bg-gray-700 text-gray-300">
+                            Document Mappings
+                        </button>
+                    </div>
+                    <div class="flex space-x-2 w-full sm:w-auto">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-sm rounded-lg flex items-center space-x-2 flex-1 sm:flex-none justify-center">
+                            <span>📤</span>
+                            <span>Upload</span>
+                        </button>
+                        <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 text-sm rounded-lg flex items-center space-x-2 flex-1 sm:flex-none justify-center">
+                            <span>📥</span>
+                            <span>Export</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gray-800 overflow-hidden shadow-lg rounded-lg border border-gray-700">
+                <div class="p-4">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="h-6 w-6 text-green-400 mb-2">✅</div>
+                        <p class="text-xs font-medium text-gray-400">Total Controls</p>
+                        <p class="text-xl font-bold text-white" id="total-controls">85</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 overflow-hidden shadow-lg rounded-lg border border-gray-700">
+                <div class="p-4">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="h-6 w-6 text-blue-400 mb-2">📈</div>
+                        <p class="text-xs font-medium text-gray-400">Average Maturity</p>
+                        <p class="text-xl font-bold text-white" id="avg-maturity">2.8</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 overflow-hidden shadow-lg rounded-lg border border-gray-700">
+                <div class="p-4">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="h-6 w-6 text-yellow-400 mb-2">⚠️</div>
+                        <p class="text-xs font-medium text-gray-400">Under Review</p>
+                        <p class="text-xl font-bold text-white" id="under-review">18</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 overflow-hidden shadow-lg rounded-lg border border-gray-700">
+                <div class="p-4">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="h-6 w-6 text-gray-400 mb-2">🕐</div>
+                        <p class="text-xs font-medium text-gray-400">Pending</p>
+                        <p class="text-xl font-bold text-white" id="pending-count">15</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="bg-gray-800 p-4 rounded-lg shadow-lg mb-8 border border-gray-700">
+            <div class="grid grid-cols-1 gap-4">
+                <div class="relative">
+                    <input
+                        type="text"
+                        placeholder="Search controls..."
+                        id="search-input"
+                        onkeyup="filterData()"
+                        class="pl-10 w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <div class="absolute left-3 top-3 h-4 w-4 text-gray-400">🔍</div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <select
+                        id="domain-filter"
+                        onchange="filterData()"
+                        class="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="all">All Domains</option>
+                        <option value="leadership">Leadership & Governance</option>
+                        <option value="risk">Risk Management</option>
+                        <option value="operations">Operations & Technology</option>
+                        <option value="third-party">Third Party Security</option>
+                    </select>
+                    
+                    <select
+                        id="status-filter"
+                        onchange="filterData()"
+                        class="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="resubmit">Re-submission Requested</option>
+                        <option value="monitoring">Under Monitoring</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overview Section -->
+        <div id="overview-section" class="space-y-8 mb-8">
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">ACN vs IA Maturity Scores</h3>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="maturity-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Control Status Distribution</h3>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="status-pie-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Analytics Section -->
+        <div id="detailed-section" class="space-y-8 mb-8" style="display: none;">
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Status by Department</h3>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="department-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Status by Sub-Department</h3>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="subdepartment-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Status by Director</h3>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="director-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Status by ACN Owner</h3>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="owner-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Submitted Controls - Three Pillars Breakdown</h3>
+                <div class="relative" style="height: 250px;">
+                    <canvas id="pillars-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Mappings Section -->
+        <div id="mappings-section" class="space-y-8 mb-8" style="display: none;">
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Controls by Design Document</h3>
+                <div class="space-y-3 max-h-80 overflow-y-auto" id="design-documents">
+                    <!-- Design documents will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Controls by KPI</h3>
+                <div class="space-y-3 max-h-80 overflow-y-auto" id="kpi-mapping">
+                    <!-- KPI mappings will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Controls by KRI</h3>
+                <div class="space-y-3 max-h-80 overflow-y-auto" id="kri-mapping">
+                    <!-- KRI mappings will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data generation
+        const domains = [
+            "Cyber Security Leadership and Governance",
+            "Cyber Security Risk Management & Compliance", 
+            "Operation & Technology",
+            "Third Party Security"
+        ];
+        
+        const statuses = ["Pending", "Submitted", "Re-submission requested by IA", "Submitted but under monitoring", "Closed"];
+        const departments = ["CISD", "Operations", "Risk Management", "IT Security"];
+        const subDepartments = ["CISO Office", "CIS Risk", "Operations", "Governance"];
+        const directors = ["Abdulmajeed A. Alrasheed", "Norah Alnashmi", "Mohammed Al-Rashid"];
+        const acnOwners = ["Jane", "Leen", "Faris", "Ali", "Sarah", "Ahmed"];
+        
+        const designDocuments = [
+            "Annual Pentesting Plan",
+            "Application Security Standard", 
+            "Cloud Computing Framework",
+            "Compliance Management Framework",
+            "Cyber Defense Framework",
+            "Incident Management Framework",
+            "Incident Response Plan",
+            "Monitoring and Detection Framework"
+        ];
+        
+        const kpis = ["KPI-23", "KPI-28", "KPI-29", "KPI-30", "KPI-33", "KPI-38"];
+        const kris = ["KRI-01", "KRI-05", "KRI-12", "KRI-18"];
+
+        // Generate sample data
+        let controlsData = [];
+        for(let i = 1; i <= 85; i++) {
+            controlsData.push({
+                id: i,
+                domainName: domains[Math.floor(Math.random() * domains.length)],
+                controlCode: `3.${Math.floor(Math.random() * 5) + 1}.${Math.floor(Math.random() * 3) + 1}-${i}`,
+                controlName: `Control requirement ${i}`,
+                acnOwner: acnOwners[Math.floor(Math.random() * acnOwners.length)],
+                department: departments[Math.floor(Math.random() * departments.length)],
+                subDepartment: subDepartments[Math.floor(Math.random() * subDepartments.length)],
+                director: directors[Math.floor(Math.random() * directors.length)],
+                status: statuses[Math.floor(Math.random() * statuses.length)],
+                acnMaturityScore: Math.floor(Math.random() * 6),
+                iaMaturityScore: Math.random() > 0.3 ? Math.floor(Math.random() * 6) : "Review in progress",
+                designSubmitted: Math.random() > 0.3,
+                implementationSubmitted: Math.random() > 0.4,
+                effectivenessSubmitted: Math.random() > 0.35,
+                designDocument: designDocuments[Math.floor(Math.random() * designDocuments.length)],
+                kpi: Math.random() > 0.3 ? kpis[Math.floor(Math.random() * kpis.length)] : null,
+                kri: Math.random() > 0.4 ? kris[Math.floor(Math.random() * kris.length)] : null
+            });
+        }
+
+        let filteredData = [...controlsData];
+        let charts = {};
+
+        // Status colors
+        const statusColors = {
+            'Pending': '#6B7280',
+            'Submitted': '#10B981', 
+            'Re-submission requested by IA': '#F59E0B',
+            'Submitted but under monitoring': '#3B82F6',
+            'Closed': '#065F46'
+        };
+
+        // View management
+        function showView(viewName) {
+            // Hide all sections
+            document.getElementById('overview-section').style.display = 'none';
+            document.getElementById('detailed-section').style.display = 'none';
+            document.getElementById('mappings-section').style.display = 'none';
+
+            // Reset button styles
+            document.getElementById('btn-overview').className = 'px-3 py-2 text-sm rounded-lg bg-gray-700 text-gray-300';
+            document.getElementById('btn-detailed').className = 'px-3 py-2 text-sm rounded-lg bg-gray-700 text-gray-300';
+            document.getElementById('btn-mappings').className = 'px-3 py-2 text-sm rounded-lg bg-gray-700 text-gray-300';
+
+            // Show selected section and update button
+            document.getElementById(viewName + '-section').style.display = 'block';
+            document.getElementById('btn-' + viewName).className = 'px-3 py-2 text-sm rounded-lg bg-blue-600 text-white';
+
+            // Initialize charts for the selected view
+            if (viewName === 'overview') {
+                initOverviewCharts();
+            } else if (viewName === 'detailed') {
+                initDetailedCharts();
+            } else if (viewName === 'mappings') {
+                initMappings();
+            }
+        }
+
+        // Filter functionality
+        function filterData() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const domainFilter = document.getElementById('domain-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
+
+            filteredData = controlsData.filter(item => {
+                const matchesSearch = item.controlCode.toLowerCase().includes(searchTerm) || 
+                                    item.controlName.toLowerCase().includes(searchTerm);
+                const matchesDomain = domainFilter === 'all' || 
+                                    (domainFilter === 'leadership' && item.domainName.includes('Leadership')) ||
+                                    (domainFilter === 'risk' && item.domainName.includes('Risk')) ||
+                                    (domainFilter === 'operations' && item.domainName.includes('Operation')) ||
+                                    (domainFilter === 'third-party' && item.domainName.includes('Third Party'));
+                const matchesStatus = statusFilter === 'all' || 
+                                    (statusFilter === 'pending' && item.status === 'Pending') ||
+                                    (statusFilter === 'submitted' && item.status === 'Submitted') ||
+                                    (statusFilter === 'resubmit' && item.status === 'Re-submission requested by IA') ||
+                                    (statusFilter === 'monitoring' && item.status === 'Submitted but under monitoring') ||
+                                    (statusFilter === 'closed' && item.status === 'Closed');
+
+                return matchesSearch && matchesDomain && matchesStatus;
+            });
+
+            updateStats();
+            refreshCurrentView();
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('total-controls').textContent = filteredData.length;
+            
+            const avgMaturity = filteredData.length > 0 ? 
+                (filteredData.reduce((sum, item) => 
+                    sum + (typeof item.acnMaturityScore === 'number' ? item.acnMaturityScore : 0), 0) / 
+                 filteredData.filter(item => typeof item.acnMaturityScore === 'number').length).toFixed(1)
+                : '0.0';
+            document.getElementById('avg-maturity').textContent = avgMaturity;
+            
+            document.getElementById('under-review').textContent = 
+                filteredData.filter(item => item.iaMaturityScore === "Review in progress").length;
+            
+            document.getElementById('pending-count').textContent = 
+                filteredData.filter(item => item.status === "Pending").length;
+        }
+
+        // Refresh current view
+        function refreshCurrentView() {
+            if (document.getElementById('overview-section').style.display !== 'none') {
+                initOverviewCharts();
+            } else if (document.getElementById('detailed-section').style.display !== 'none') {
+                initDetailedCharts();
+            } else if (document.getElementById('mappings-section').style.display !== 'none') {
+                initMappings();
+            }
+        }
+
+        // Initialize overview charts
+        function initOverviewCharts() {
+            // Maturity comparison chart
+            const maturityData = getMaturityComparison();
+            if (charts.maturityChart) charts.maturityChart.destroy();
+            
+            const ctx1 = document.getElementById('maturity-chart').getContext('2d');
+            charts.maturityChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: maturityData.labels,
+                    datasets: [
+                        {
+                            label: 'ACN Score',
+                            data: maturityData.acn,
+                            backgroundColor: '#3B82F6'
+                        },
+                        {
+                            label: 'IA Score',
+                            data: maturityData.ia,
+                            backgroundColor: '#10B981'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#D1D5DB'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#D1D5DB'
+                            },
+                            grid: {
+                                color: '#374151'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#D1D5DB'
+                            },
+                            grid: {
+                                color: '#374151'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Status pie chart
+            const statusData = getStatusDistribution();
+            if (charts.statusChart) charts.statusChart.destroy();
+            
+            const ctx2 = document.getElementById('status-pie-chart').getContext('2d');
+            charts.statusChart = new Chart(ctx2, {
+                type: 'pie',
+                data: {
+                    labels: statusData.labels,
+                    datasets: [{
+                        data: statusData.values,
+                        backgroundColor: statusData.colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#D1D5DB'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize detailed charts
+        function initDetailedCharts() {
+            // Department chart
+            const deptData = getStatusByDepartment();
+            if (charts.deptChart) charts.deptChart.destroy();
+            
+            const ctx3 = document.getElementById('department-chart').getContext('2d');
+            charts.deptChart = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: deptData.labels,
+                    datasets: [
+                        {
+                            label: 'Closed',
+                            data: deptData.closed,
+                            backgroundColor: '#065F46'
+                        },
+                        {
+                            label: 'Submitted',
+                            data: deptData.submitted,
+                            backgroundColor: '#10B981'
+                        },
+                        {
+                            label: 'Pending',
+                            data: deptData.pending,
+                            backgroundColor: '#6B7280'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: {
+                                color: '#D1D5DB'
+                            },
+                            grid: {
+                                color: '#374151'
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            ticks: {
+                                color: '#D1D5DB'
+                            },
+                            grid: {
+                                color: '#374151'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#D1D5DB'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Similar implementation for other detailed charts...
+            // (Sub-department, Director, ACN Owner, Pillars)
+        }
+
+        // Initialize mappings
+        function initMappings() {
+            // Design documents
+            const designDocs = getDesignDocumentMapping();
+            const designContainer = document.getElementById('design-documents');
+            designContainer.innerHTML = '';
+            
+            designDocs.forEach(doc => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-blue-900';
+                div.innerHTML = `
+                    <span class="text-sm font-medium text-gray-300" title="${doc.fullName}">
+                        ${doc.name}
+                    </span>
+                    <span class="bg-blue-600 text-blue-100 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        ${doc.count}
+                    </span>
+                `;
+                designContainer.appendChild(div);
+            });
+
+            // KPI mappings
+            const kpiMappings = getKPIMapping();
+            const kpiContainer = document.getElementById('kpi-mapping');
+            kpiContainer.innerHTML = '';
+            
+            kpiMappings.forEach(kpi => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-green-900';
+                div.innerHTML = `
+                    <span class="text-sm font-medium text-gray-300">
+                        ${kpi.name}
+                    </span>
+                    <span class="bg-green-600 text-green-100 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        ${kpi.count}
+                    </span>
+                `;
+                kpiContainer.appendChild(div);
+            });
+
+            // KRI mappings
+            const kriMappings = getKRIMapping();
+            const kriContainer = document.getElementById('kri-mapping');
+            kriContainer.innerHTML = '';
+            
+            kriMappings.forEach(kri => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-purple-900';
+                div.innerHTML = `
+                    <span class="text-sm font-medium text-gray-300">
+                        ${kri.name}
+                    </span>
+                    <span class="bg-purple-600 text-purple-100 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        ${kri.count}
+                    </span>
+                `;
+                kriContainer.appendChild(div);
+            });
+        }
+
+        // Data processing functions
+        function getMaturityComparison() {
+            const labels = [];
+            const acn = [];
+            const ia = [];
+            
+            for (let level = 0; level <= 5; level++) {
+                labels.push(`Level ${level}`);
+                acn.push(filteredData.filter(item => item.acnMaturityScore === level).length);
+                ia.push(filteredData.filter(item => item.iaMaturityScore === level).length);
+            }
+            
+            return { labels, acn, ia };
+        }
+
+        function getStatusDistribution() {
+            const distribution = {};
+            filteredData.forEach(item => {
+                distribution[item.status] = (distribution[item.status] || 0) + 1;
+            });
+            
+            const labels = Object.keys(distribution);
+            const values = Object.values(distribution);
+            const colors = labels.map(label => statusColors[label]);
+            
+            return { labels, values, colors };
+        }
+
+        function getStatusByDepartment() {
+            const data = {};
+            filteredData.forEach(item => {
+                if (!data[item.department]) {
+                    data[item.department] = { closed: 0, submitted: 0, pending: 0 };
+                }
+                if (item.status === 'Closed') data[item.department].closed++;
+                if (item.status === 'Submitted') data[item.department].submitted++;
+                if (item.status === 'Pending') data[item.department].pending++;
+            });
+            
+            const labels = Object.keys(data);
+            const closed = labels.map(dept => data[dept].closed);
+            const submitted = labels.map(dept => data[dept].submitted);
+            const pending = labels.map(dept => data[dept].pending);
+            
+            return { labels, closed, submitted, pending };
+        }
+
+        function getDesignDocumentMapping() {
+            const mapping = {};
+            filteredData.forEach(item => {
+                if (item.designDocument) {
+                    mapping[item.designDocument] = (mapping[item.designDocument] || 0) + 1;
+                }
+            });
+            
+            return Object.entries(mapping)
+                .map(([doc, count]) => ({
+                    name: doc.length > 25 ? doc.substring(0, 25) + '...' : doc,
+                    fullName: doc,
+                    count
+                }))
+                .sort((a, b) => b.count - a.count);
+        }
+
+        function getKPIMapping() {
+            const mapping = {};
+            filteredData.forEach(item => {
+                if (item.kpi) {
+                    mapping[item.kpi] = (mapping[item.kpi] || 0) + 1;
+                }
+            });
+            
+            return Object.entries(mapping)
+                .map(([kpi, count]) => ({ name: kpi, count }))
+                .sort((a, b) => b.count - a.count);
+        }
+
+        function getKRIMapping() {
+            const mapping = {};
+            filteredData.forEach(item => {
+                if (item.kri) {
+                    mapping[item.kri] = (mapping[item.kri] || 0) + 1;
+                }
+            });
+            
+            return Object.entries(mapping)
+                .map(([kri, count]) => ({ name: kri, count }))
+                .sort((a, b) => b.count - a.count);
+        }
+
+        // Initialize the dashboard
+        function initDashboard() {
+            updateStats();
+            showView('overview');
+        }
+
+        // Run when page loads
+        window.addEventListener('load', initDashboard);
+    </script>
+</body>
+</html>
+                    
